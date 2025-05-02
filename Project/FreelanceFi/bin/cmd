@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+usage() {
+    >&2 echo "Usage: $(basename $0) (run | test) [<package>]"
+    >&2 echo "       run without [<package>] to see all packages"
+    exit 1
+}
+
+run() {
+    go run "$1/main.go"
+}
+
+test() {
+    go test "$1/..."
+}
+
+[ $# -lt 1 ] && {
+    usage
+}
+
+command="$1"
+case "$command" in
+    test | run)
+        # do nothing, command is good
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+cmd_dir="$(git rev-parse --show-toplevel)/cmd"
+[ $? -ne 0 ] && {
+    cmd_dir="$(realpath ..)/cmd"
+}
+
+packages=($(ls "$cmd_dir"))
+
+[ $# -eq 1 ] && {
+    >&2 echo "Available packages to $command:"
+    for p in "${packages[@]}"; do
+        echo "  - $p"
+    done
+    exit 1
+}
+
+package="$2"
+
+found=false
+for p in "${packages[@]}"; do
+    if [[ "$package" == "$p" ]]; then
+        found=true
+        break
+    fi
+done
+
+if ! $found; then
+    >&2 echo "$package is not a valid package"
+    exit 1
+fi
+
+$command "$cmd_dir/$package"
