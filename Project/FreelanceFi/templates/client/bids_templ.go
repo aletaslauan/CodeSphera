@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 // Import necessary packages
 import (
 	"fmt"
-	"freelancefi/db" // *** REPLACE with actual path to db package ***
+	"freelancefi/db"
 	"strings"
 	//"time" // Needed for CreatedAt formatting (assuming pgtype.Timestamptz)
 )

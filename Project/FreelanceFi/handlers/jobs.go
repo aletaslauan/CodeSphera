@@ -90,8 +90,7 @@ func (h *JobsHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(job)
 }
 
-// *** NEW Handler for POST /jobsform (Accepts HTML Form Data) ***
-func (h *JobsHandler) CreateJobFromForm(w http.ResponseWriter, r *http.Request) {
+	func (h *JobsHandler) CreateJobFromForm(w http.ResponseWriter, r *http.Request) {
 	
 	// Parse the form data from the request
 	if err := r.ParseForm(); err != nil {
@@ -199,11 +198,7 @@ func (h *JobsHandler) CreateJobFromForm(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, "/client/dashboard", http.StatusSeeOther) // Or "/jobspage" or other relevant page
 }
 
-
-// Handler for GET /jobs (JSON API - Lists Open Jobs)
-// *** Note: This handler currently accesses Service.DB directly. ***
-// *** It should ideally call a method on h.Service instead. ***
-// *** Example: jobs, err := h.Service.ListOpenJobs(ctx, listInput) ***
+// Handler for GET /jobs (List open jobs with pagination)
 func (h *JobsHandler) ListOpenJobs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context() // Get context once
 	limitStr := r.URL.Query().Get("limit")
@@ -219,20 +214,13 @@ func (h *JobsHandler) ListOpenJobs(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	// --- Refactor Suggestion: Call Service Method ---
-	// Replace this direct DB call with a call to a service method:
-	// listInput := services.ListJobsInput{ Limit: int32(limit), Offset: int32(offset) }
-	// jobs, err := h.Service.ListOpenJobs(ctx, listInput) // Assuming service method exists
-	// If keeping direct DB access for now:
+	// Call the service to list open jobs
 	jobs, err := h.Service.DB.ListOpenJobs(ctx, db.ListOpenJobsParams{
 		Limit:  int32(limit),
 		Offset: int32(offset),
 	})
-	// --- End Refactor Suggestion ---
+	
 
-	// Handle potential errors from DB/Service call
-	// The service method (if used) should ideally handle ErrNoRows.
-	// If calling DB directly, handle it here:
 	if err != nil && err.Error() != "no rows in result set" { // Basic check, use errors.Is(err, pgx.ErrNoRows) if using pgx directly
 		log.Printf("Error listing open jobs (API): %v", err)
 		http.Error(w, "Could not list jobs", http.StatusInternalServerError)
