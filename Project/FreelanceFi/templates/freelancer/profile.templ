@@ -1,11 +1,11 @@
 package templates
 
-templ HomePage(username string, role string, actionLink templ.SafeURL, actionLabel string) {
+templ ProfilePage(username string) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Home - FreelanceFi</title>
+    <title>Profile - FreelanceFi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -43,7 +43,7 @@ templ HomePage(username string, role string, actionLink templ.SafeURL, actionLab
                     </span>
                     <input type="search"
                            class="form-control border-start-0 rounded-end-pill px-3"
-                           placeholder="Search for jobs, people ..."
+                           placeholder="Search for people ..."
                            aria-label="Search" />
                 </div>
             </form>
@@ -82,9 +82,6 @@ templ HomePage(username string, role string, actionLink templ.SafeURL, actionLab
                     <a class="nav-link text-white" href="/home">Home</a>
                 </li>
                 <li class="nav-item mb-2">
-                    <a class="nav-link text-white" href="/jobspage">Jobs</a>
-                </li>
-                <li class="nav-item mb-2">
                     <a class="nav-link text-white" href="/mywork">My Work</a>
                 </li>
                 <li class="nav-item mb-2">
@@ -100,12 +97,8 @@ templ HomePage(username string, role string, actionLink templ.SafeURL, actionLab
         <div class="flex-grow-1 d-flex justify-content-center align-items-center bg-light">
             <div class="card p-5 shadow-lg text-center">
                 <h1 class="mb-4">Welcome, <strong>{username}</strong>!</h1>
-                <p class="mb-4">You are logged in as a <strong>{role}</strong>.</p>
-                if role == "client" {
-                    <p class="mb-4">You can post tasks and manage your projects.</p>
-                } else if role == "freelancer" {
-                    <p class="mb-4">You can browse and apply for gigs.</p>
-                }
+                <p class="mb-2">This is your profile page.</p>
+                <p class="text-muted">Here you can view and update your personal information.</p>
             </div>
         </div>
     </div>

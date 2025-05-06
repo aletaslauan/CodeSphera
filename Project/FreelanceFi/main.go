@@ -9,18 +9,29 @@ import (
 	"freelancefi/config"
 	"freelancefi/db"
 	"freelancefi/handlers"
+	"freelancefi/services"
 	"freelancefi/templates"
+	clienttpl "freelancefi/templates/client"
+	freelencertpl "freelancefi/templates/freelancer"
 
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5" 
 	"golang.org/x/crypto/bcrypt"
+	
 )
+
+// Context key for user ID (recommended practice).
+// Define this at the package level so all handlers in this file can access it.
+type contextKey string
+const userIDKey contextKey = "userID"
 
 func createSessionToken(userID int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -57,7 +68,20 @@ func main() {
 	pool := db.NewConnectionPool()
 	queries := db.New(pool)
 
+	jobService := services.JobService{DB: queries}
+	jobsHandler := handlers.JobsHandler{Service: &jobService}
+
+	
+	bidService := services.BidService{DB: queries}
+	bidsHandler := handlers.BidsHandler{Service: &bidService}
+
+	r.With(AuthMiddleware).Post("/jobs/{jobID}/bids", bidsHandler.PlaceBid)
+	r.With(AuthMiddleware).Get("/jobs/{jobID}/bids", bidsHandler.ListBidsForJob)
+
+	
 	userHandler := handlers.UserHandler{Queries: queries}
+	//jobsHandler := handlers.JobsHandler{Queries: queries}
+	//bidsHandler := handlers.BidsHandler{Queries: queries}
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		templates.LoginPage().Render(r.Context(), w)
@@ -68,12 +92,20 @@ func main() {
 
 	r.With(AuthMiddleware).Get("/home", homeHandler(queries))
 	r.With(AuthMiddleware).Get("/profile", profileHandler(queries))
-	r.With(AuthMiddleware).Get("/jobs", jobsHandler(queries))
+	r.With(AuthMiddleware).Get("/jobspage", jobspageHandler(queries))
+
+	r.With(AuthMiddleware).Get("/createjobs", createJobPageHandler(queries))
+	//r.Post("/jobsform", jobsHandler.CreateJobFromForm) 
+	r.With(AuthMiddleware).Post("/jobsform", jobsHandler.CreateJobFromForm)
+
 	r.With(AuthMiddleware).Get("/mywork", myworkHandler(queries))
 	r.With(AuthMiddleware).Get("/finance", financeHandler(queries))
 
 	r.With(AuthMiddleware).Get("/client/dashboard", clientDashboardHandler(queries))
-	r.With(AuthMiddleware).Get("/freelancer/dashboard", freelancerDashboardHandler(queries))
+	r.With(AuthMiddleware).Get("/freelancer/freelancer_dashboard", freelancerDashboardHandler(queries))
+
+	r.With(AuthMiddleware).Post("/jobs", jobsHandler.CreateJob)
+	r.With(AuthMiddleware).Get("/jobs", jobsHandler.ListOpenJobs)
 
 	r.Post("/login", loginHandler(queries))
 	r.Post("/register", registerHandler(queries))
@@ -142,7 +174,7 @@ func loginHandler(queries *db.Queries) http.HandlerFunc {
 		if user.Role == "client" {
 			w.Header().Set("HX-Redirect", "/client/dashboard")
 		} else {
-			w.Header().Set("HX-Redirect", "/freelancer/dashboard")
+			w.Header().Set("HX-Redirect", "/freelancer/freelancer_dashboard")
 		}
 	}
 }
@@ -198,7 +230,7 @@ func registerHandler(queries *db.Queries) http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(`
 			<div class="alert alert-success text-center" role="alert">
-				Registration successful! Redirecting to login page...
+				Registration successful! Redirecting to I page...
 				<div class="spinner-border spinner-border-sm ms-2" role="status"></div>
 			</div>
 			<script>
@@ -234,7 +266,7 @@ func homeHandler(queries *db.Queries) http.HandlerFunc {
 	}
 }
 
-func jobsHandler(queries *db.Queries) http.HandlerFunc {
+func jobspageHandler(queries *db.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value("userID").(int)
 		user, err := queries.GetUser(r.Context(), int32(userID))
@@ -242,7 +274,142 @@ func jobsHandler(queries *db.Queries) http.HandlerFunc {
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
-		templates.JobsPage(user.Username).Render(r.Context(), w)
+
+		query := r.URL.Query()
+		limit := 9 // default
+		offset := 0
+
+		if l := query.Get("limit"); l != "" {
+			if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+				limit = parsed
+			}
+		}
+
+		if o := query.Get("offset"); o != "" {
+			if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+				offset = parsed
+			}
+		}
+
+		totalJobs, err := queries.CountOpenJobs(r.Context())
+		if err != nil {
+			http.Error(w, "Could not count jobs", http.StatusInternalServerError)
+			return
+		}
+
+		jobs, err := queries.ListOpenJobs(r.Context(), db.ListOpenJobsParams{
+			Limit:  int32(limit),
+			Offset: int32(offset),
+		})
+		if err != nil {
+			http.Error(w, "Could not fetch jobs", http.StatusInternalServerError)
+			return
+		}
+
+		prevOffset := offset - limit
+		if prevOffset < 0 {
+			prevOffset = 0
+		}
+		nextOffset := offset + limit
+
+		currentPage := (offset / limit) + 1
+		totalPages := (int(totalJobs) + limit - 1) / limit
+
+		err = templates.JobsPage(user.Username, jobs, limit, offset, prevOffset, nextOffset, currentPage, totalPages).Render(r.Context(), w)
+		if err != nil {
+			log.Println("template render error:", err)
+			http.Error(w, "Template error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func createJobPageHandler(queries *db.Queries) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := r.Context().Value("userID").(int)
+		user, err := queries.GetUser(r.Context(), int32(userID))
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		categories, err := queries.ListCategories(r.Context()) // your SQL query for categories
+		if err != nil {
+			http.Error(w, "Failed to load categories", http.StatusInternalServerError)
+			return
+		}
+
+		var names []string
+		for _, cat := range categories {
+			names = append(names, cat.Name)
+		}
+
+		clienttpl.CreateJobPage(user.Username, categories).Render(r.Context(), w)
+	}
+}
+
+
+
+
+
+func handleJobBidsPage(queries *db.Queries) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		// --- Get Job ID ---
+		jobIDStr := chi.URLParam(r, "jobID")
+		jobID64, err := strconv.ParseInt(jobIDStr, 10, 32)
+		if err != nil {
+			log.Printf("Invalid job ID format in URL: %s", jobIDStr)
+			http.Error(w, "Invalid Job ID", http.StatusBadRequest)
+			return
+		}
+		jobID := int32(jobID64)
+		// --- Get Current User ---
+		userIDValue := ctx.Value(userIDKey)
+		if userIDValue == nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		currentUserID, ok := userIDValue.(int)
+		if !ok {
+			log.Printf("Error: userID in context is not int: %T", userIDValue)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		currentUserID32 := int32(currentUserID)
+		currentUser, err := queries.GetUser(ctx, currentUserID32)
+		if err != nil {
+			log.Printf("Error fetching user %d: %v", currentUserID, err)
+			// Handle error appropriately (e.g., 500 or 404)
+			http.Error(w, "Error fetching user", http.StatusInternalServerError)
+			return
+		}
+		// --- Fetch Job ---
+		job, err := queries.GetJobByID(ctx, jobID) // Use correct GetJobByID
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			log.Printf("Error fetching job %d: %v", jobID, err)
+			http.Error(w, "Failed to load job", http.StatusInternalServerError)
+			return
+		}
+		// --- Fetch Bids ---
+		bids, err := queries.ListBidsForJob(ctx, jobID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("Error fetching bids %d: %v", jobID, err)
+			http.Error(w, "Failed to load bids", http.StatusInternalServerError)
+			return
+		}
+		if errors.Is(err, pgx.ErrNoRows) || bids == nil {
+			bids = []db.Bid{}
+		}
+		// --- Render Template ---
+		component := clienttpl.BidsPage(currentUser.Username, currentUserID32, job, bids)
+		renderErr := component.Render(ctx, w)
+		if renderErr != nil {
+			log.Printf("Error rendering BidsPage %d: %v", jobID, renderErr)
+		}
 	}
 }
 
@@ -282,8 +449,10 @@ func clientDashboardHandler(queries *db.Queries) http.HandlerFunc {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
+		clienttpl.ClientPage(user.Username, user.Role, "/client/profile", "Go to your profile").Render(r.Context(), w)
+
 		//templates.ClientDashboard(user.Username).Render(r.Context(), w)
-		w.Header().Set("HX-Redirect", "/client/dashboard")
+		//w.Header().Set("HX-Redirect", "/client/dashboard")
 	}
 }
 
@@ -299,7 +468,9 @@ func freelancerDashboardHandler(queries *db.Queries) http.HandlerFunc {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
-		w.Header().Set("HX-Redirect", "/freelancer/dashboard")
+		freelencertpl.HomePage(user.Username, user.Role, "/profile", "Go to your profile").Render(r.Context(), w)
+
+		//w.Header().Set("HX-Redirect", "/freelancer/dashboard")
 		// 	templates.FreelancerDashboard(user.Username).Render(r.Context(), w)
 	}
 }

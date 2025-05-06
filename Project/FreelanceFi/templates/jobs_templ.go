@@ -8,7 +8,16 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func JobsPage(username string) templ.Component {
+// Use standard Go import syntax
+import (
+	"fmt"
+	"freelancefi/db"
+	"math/big"
+	"strconv"
+	"strings"
+)
+
+func JobsPage(username string, jobs []db.Job, limit, offset, prevOffset, nextOffset, currentPage, totalPages int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -29,20 +38,187 @@ func JobsPage(username string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Jobs - FreelanceFi</title><link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css\" rel=\"stylesheet\"><link href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css\" rel=\"stylesheet\"><script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js\"></script><style>\n        body {\n            margin: 0;\n            padding: 0;\n            height: 100vh;\n            overflow: hidden;\n        }\n\n        #profileDropdown::after {\n            display: none;\n        }\n\n        #profileDropdown:focus {\n            box-shadow: none;\n        }\n\n        .dropdown-menu.show {\n            display: block;\n        }\n    </style></head><body class=\"bg-light\"><!-- Top Navbar --><nav class=\"navbar navbar-expand-lg navbar-dark bg-dark shadow-sm border-bottom px-4 py-2 mb-0\"><div class=\"container-fluid\"><a class=\"navbar-brand fw-bold text-white\" href=\"/home\" style=\"margin-right: 60px; font-size: 1.75rem;\">FreelanceFi</a><form class=\"d-flex\" role=\"search\"><div class=\"input-group\" style=\"width: 450px; height: 44px;\"><span class=\"input-group-text bg-white border-end-0 rounded-start-pill px-3\"><i class=\"bi bi-search\"></i></span> <input type=\"search\" class=\"form-control border-start-0 rounded-end-pill px-3\" placeholder=\"Search jobs...\" aria-label=\"Search\"></div></form><div class=\"d-flex align-items-center gap-3 ms-auto\"><a href=\"/messages\" class=\"text-white\"><i class=\"bi bi-envelope fs-5\"></i></a> <a href=\"/saved\" class=\"text-white\"><i class=\"bi bi-bookmark fs-5\"></i></a> <a href=\"/notifications\" class=\"text-white\"><i class=\"bi bi-bell fs-5\"></i></a><!-- Profile Dropdown --><div class=\"dropdown position-relative\" id=\"profileDropdownWrapper\"><button class=\"btn btn-outline-light rounded-circle text-uppercase fw-bold\" type=\"button\" id=\"profileDropdown\" style=\"width: 40px; height: 40px;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Jobs - FreelanceFi</title><link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css\" rel=\"stylesheet\"><link href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css\" rel=\"stylesheet\"><script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js\"></script><style>\n\t\t\t\tbody { margin: 0; padding: 0; height: 100vh; }\n\t\t\t\t#profileDropdown::after { display: none; }\n\t\t\t\t#profileDropdown:focus { box-shadow: none; }\n\t\t\t\t.dropdown-menu.show { display: block; }\n\t\t\t\t.card-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 60px; }\n\t\t\t</style></head><body class=\"bg-light\"><!-- Top Navbar --><nav class=\"navbar navbar-expand-lg navbar-dark bg-dark shadow-sm border-bottom px-4 py-2 mb-0\"><div class=\"container-fluid\"><a class=\"navbar-brand fw-bold text-white\" href=\"/home\" style=\"margin-right: 60px; font-size: 1.75rem;\">FreelanceFi</a><form class=\"d-flex\" role=\"search\"><div class=\"input-group\" style=\"width: 450px; height: 44px;\"><span class=\"input-group-text bg-white border-end-0 rounded-start-pill px-3\"><i class=\"bi bi-search\"></i></span> <input type=\"search\" class=\"form-control border-start-0 rounded-end-pill px-3\" placeholder=\"Search jobs...\" aria-label=\"Search\"></div></form><div class=\"d-flex align-items-center gap-3 ms-auto\"><a href=\"/messages\" class=\"text-white\"><i class=\"bi bi-envelope fs-5\"></i></a> <a href=\"/saved\" class=\"text-white\"><i class=\"bi bi-bookmark fs-5\"></i></a> <a href=\"/notifications\" class=\"text-white\"><i class=\"bi bi-bell fs-5\"></i></a><div class=\"dropdown position-relative\" id=\"profileDropdownWrapper\"><button class=\"btn btn-outline-light rounded-circle text-uppercase fw-bold\" type=\"button\" id=\"profileDropdown\" style=\"width: 40px; height: 40px;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(username[:1])
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 60, Col: 37}
+		if len(username) > 0 {
+			var templ_7745c5c3_Var2 string
+			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(strings.ToUpper(string(username[0])))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 47, Col: 47}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("?")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 49, Col: 14}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</button><ul class=\"dropdown-menu position-absolute end-0 mt-2\" aria-labelledby=\"profileDropdown\" style=\"min-width: 180px;\"><li><a class=\"dropdown-item\" href=\"/profile\"><i class=\"bi bi-person me-2\"></i>Profile</a></li><li><a class=\"dropdown-item\" href=\"/settings\"><i class=\"bi bi-gear me-2\"></i>Settings</a></li><li><hr class=\"dropdown-divider\"></li><li><a class=\"dropdown-item text-danger\" href=\"/logout\"><i class=\"bi bi-box-arrow-right me-2\"></i>Log out</a></li></ul></div></div></div></nav><!-- Layout: Sidebar + Main Content --><div class=\"d-flex\" style=\"height: calc(100vh - 64px);\"><!-- Sidebar --><div class=\"bg-dark text-white d-flex flex-column p-3\" style=\"width: 250px; flex-shrink: 0;\"><ul class=\"nav flex-column mb-auto\"><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/home\">Home</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white active\" aria-current=\"page\" href=\"/jobspage\">Jobs</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/mywork\">My Work</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/finance\">Finance</a></li></ul><div class=\"mt-4\"><a class=\"btn btn-secondary w-100\" href=\"/logout\">Logout</a></div></div><!-- Main Content --><div class=\"flex-grow-1 overflow-auto p-4\"><h2 class=\"mb-4\">Available Jobs</h2><p class=\"text-center text-muted\">Page ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</button><ul class=\"dropdown-menu position-absolute end-0 mt-2\" aria-labelledby=\"profileDropdown\" style=\"min-width: 180px;\"><li><a class=\"dropdown-item\" href=\"/profile\"><i class=\"bi bi-person me-2\"></i>Profile</a></li><li><a class=\"dropdown-item\" href=\"/settings\"><i class=\"bi bi-gear me-2\"></i>Settings</a></li><li><hr class=\"dropdown-divider\"></li><li><a class=\"dropdown-item text-danger\" href=\"/\"><i class=\"bi bi-box-arrow-right me-2\"></i>Log out</a></li></ul></div></div></div></nav><!-- Layout: Sidebar + Main Content --><div class=\"d-flex\" style=\"height: calc(100vh - 64px);\"><!-- Sidebar --><div class=\"bg-dark text-white p-3\" style=\"width: 250px;\"><ul class=\"nav flex-column\"><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/home\">Home</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/jobs\">Jobs</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/mywork\">My Work</a></li><li class=\"nav-item mb-2\"><a class=\"nav-link text-white\" href=\"/finance\">Finance</a></li><li class=\"nav-item mt-4\"><a class=\"btn btn-secondary w-100\" href=\"/\">Logout</a></li></ul></div><!-- Main Content --><div class=\"flex-grow-1 overflow-auto p-4\"><h2 class=\"mb-4\">Available Jobs</h2><div class=\"row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4\"><!-- Example job card --><div class=\"col\"><div class=\"card h-100 shadow-sm\"><div class=\"card-body\"><h5 class=\"card-title\">Frontend Developer</h5><p class=\"card-text text-muted\">Company XYZ • Remote</p><p class=\"card-text\">Looking for a React developer to help build dashboard UI components...</p><a href=\"/jobs/1\" class=\"btn btn-primary btn-sm\">View Job</a></div></div></div><div class=\"col\"><div class=\"card h-100 shadow-sm\"><div class=\"card-body\"><h5 class=\"card-title\">Backend Engineer (Golang)</h5><p class=\"card-text text-muted\">Startup ABC • Hybrid</p><p class=\"card-text\">We're hiring a Go engineer to scale our API services and integrations...</p><a href=\"/jobs/2\" class=\"btn btn-primary btn-sm\">View Job</a></div></div></div><!-- Add more job cards as needed --></div></div></div><!-- JS: Dropdown hover --><script>\n        document.addEventListener(\"DOMContentLoaded\", function () {\n            const dropdown = document.querySelector(\"#profileDropdownWrapper\");\n            const menu = dropdown.querySelector(\".dropdown-menu\");\n\n            let timeout;\n\n            dropdown.addEventListener(\"mouseenter\", () => {\n                clearTimeout(timeout);\n                menu.classList.add(\"show\");\n            });\n\n            dropdown.addEventListener(\"mouseleave\", () => {\n                timeout = setTimeout(() => {\n                    menu.classList.remove(\"show\");\n                }, 200);\n            });\n        });\n    </script></body></html>")
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(currentPage))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 79, Col: 70}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " / ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(totalPages))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 79, Col: 99}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</p><div class=\"row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if len(jobs) == 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"col-12\"><p class=\"text-center text-muted\">No jobs available at the moment.</p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			for _, job := range jobs {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"col\"><div class=\"card h-100 shadow-sm\"><div class=\"card-body d-flex flex-column\"><h5 class=\"card-title\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var6 string
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(job.Title)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 88, Col: 45}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</h5><p class=\"card-text text-muted small mb-2\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if (job.BudgetMin.Valid && job.BudgetMin.Int.Cmp(big.NewInt(0)) != 0) || (job.BudgetMax.Valid && job.BudgetMax.Int.Cmp(big.NewInt(0)) != 0) {
+					var templ_7745c5c3_Var7 string
+					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(" • " + fmt.Sprintf("Budget: $%v - $%v", job.BudgetMin, job.BudgetMax))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 91, Col: 87}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p><p class=\"card-text flex-grow-1\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if job.Description != "" {
+					var templ_7745c5c3_Var8 string
+					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(job.Description)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 96, Col: 30}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				} else {
+					var templ_7745c5c3_Var9 string
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs("No description provided.")
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 98, Col: 41}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p><a href=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var10 templ.SafeURL = templ.SafeURL(fmt.Sprintf("/jobspage/%d", job.ID))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var10)))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" class=\"btn btn-dark btn-sm mt-auto\">View Job</a></div></div></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><!-- Pagination Number Links --><nav aria-label=\"Page navigation\" class=\"mt-4\"><ul class=\"pagination justify-content-center\"><li class=\"page-item\"><a class=\"page-link\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 templ.SafeURL = templ.SafeURL(fmt.Sprintf("/jobspage?limit=%d&offset=%d", limit, prevOffset))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var11)))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Previous</a></li>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for i := 1; i <= totalPages; i++ {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<li class=\"page-item if i == currentPage { active }\"><a class=\"page-link\" href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var12 templ.SafeURL = templ.SafeURL(fmt.Sprintf("/jobspage?limit=%d&offset=%d", limit, (i-1)*limit))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var12)))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/jobs.templ`, Line: 117, Col: 135}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</a></li>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<li class=\"page-item\"><a class=\"page-link\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 templ.SafeURL = templ.SafeURL(fmt.Sprintf("/jobspage?limit=%d&offset=%d", limit, nextOffset))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var14)))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\">Next</a></li></ul></nav></div></div><!-- JS: Dropdown hover --><script>\n        document.addEventListener(\"DOMContentLoaded\", function () {\n            const dropdown = document.querySelector(\"#profileDropdownWrapper\");\n            const menu = dropdown.querySelector(\".dropdown-menu\");\n\n            let timeout;\n\n            dropdown.addEventListener(\"mouseenter\", () => {\n                clearTimeout(timeout);\n                menu.classList.add(\"show\");\n            });\n\n            dropdown.addEventListener(\"mouseleave\", () => {\n                timeout = setTimeout(() => {\n                    menu.classList.remove(\"show\");\n                }, 200);\n            });\n        });\n        </script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -8,11 +8,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Bid struct {
+	ID           int32              `json:"id"`
+	JobID        int32              `json:"job_id"`
+	FreelancerID int32              `json:"freelancer_id"`
+	Amount       pgtype.Numeric     `json:"amount"`
+	CoverLetter  pgtype.Text        `json:"cover_letter"`
+	Status       string             `json:"status"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type Category struct {
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Job struct {
+	ID          int32              `json:"id"`
+	ClientID    int32              `json:"client_id"`
+	CategoryID  int32              `json:"category_id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	BudgetMin   pgtype.Numeric     `json:"budget_min"`
+	BudgetMax   pgtype.Numeric     `json:"budget_max"`
+	Deadline    pgtype.Date        `json:"deadline"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Session struct {
 	ID        pgtype.UUID      `json:"id"`
 	UserID    pgtype.Int4      `json:"user_id"`
 	TokenHash string           `json:"token_hash"`
 	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+type Transaction struct {
+	ID         int32              `json:"id"`
+	UserID     int32              `json:"user_id"`
+	JobID      int32              `json:"job_id"`
+	BidID      int32              `json:"bid_id"`
+	Type       string             `json:"type"`
+	Amount     pgtype.Numeric     `json:"amount"`
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
 }
 
 type User struct {
