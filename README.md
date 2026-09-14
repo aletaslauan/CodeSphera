@@ -99,5 +99,5 @@ Navigate to **[http://localhost:8081](http://localhost:8081)**
 
 ---
 
-## Next -> Group Project 🤝 Availability-Management-System **[Availability-Management-System]([http://localhost:8081](https://github.com/aletaslauan/Availability-Management-System))**
+## Next -> Group Project 🤝 [Availability-Management-System](https://github.com/aletaslauan/Availability-Management-System)
 
